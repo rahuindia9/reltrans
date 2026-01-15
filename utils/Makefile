@@ -16,6 +16,7 @@ FFLAGS := -DHAVE_INLINE -fPIC -fno-automatic -fno-second-underscore \
 		  -fopenmp \
 		  -I$(BUILD)/include \
 		  -I$(HEADAS_INCLUDE) \
+		  -I$(HEADAS_INCLUDE)/fftw \
 		  -J$(BUILD)/cache \
 		  -I$(BUILD)/cache
 
