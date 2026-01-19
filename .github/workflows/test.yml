@@ -1,0 +1,65 @@
+name: Test
+
+on:
+  workflow_dispatch: # allows manual triggering
+  pull_request:
+    branches:
+      - main
+    paths: [
+      '.github/workflows/test.yml',
+      '**/*.f90',
+      'utils/Makefile',
+      'utils/cli.c',
+      'wrappers.f90'
+    ]
+  push:
+    branches:
+      - main
+      - ci # for testing ci
+    paths: [
+      '.github/workflows/test.yml',
+      '**/*.f90',
+      'utils/Makefile',
+      'utils/cli.c',
+      'wrappers.f90'
+    ]
+
+concurrency:
+  # cancels when a PR gets updated
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}-${{ github.actor }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: fjebaker/heasoft:ci-6.33.1-amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Build debug reltrans
+        run: |
+          cd utils
+          make DEBUG=1
+          make DEBUG=1 exe
+      - name: Install GitHub CLI and fetch data files
+        run: |
+          apt update && apt install -y gh
+
+          # Authenticate with GitHub cli
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+          # This release version will have to be changed if changes to the test
+          # data are made
+          gh release download v0.1.0 -D reltrans-data -R reltrans/model-data
+
+          # Stitch the large files back together
+          cd reltrans-data
+          cat $(ls xillverCp_v3.4_normalised.fits-* | sort -V) > xillverCp_v3.4_normalised.fits
+      - name: Setup pytest environment
+        run: |
+          python -m pip install --upgrade pytest numpy
+      - name: Run tests
+        run: |
+          export RELTRANS_TABLES="$(realpath reltrans-data)"
+          export RELTRANS_PATH="$(realpath utils/build/lib/libreltrans.so)"
+          pytest -vvv test
