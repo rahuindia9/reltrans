@@ -2,11 +2,16 @@ BUILD  := build
 ROOTDIR := .
 HEADAS_LIB := ${HEADAS}/lib
 HEADAS_INCLUDE := ${HEADAS}/include
+
+# These may be set when invoking `make`, such as `make DEBUG=1 SANITIZE=1`.
+# The `DEBUG` option compiles a debug build of reltrans (see below).
 DEBUG = 0
+# The `SANITIZE` option enables the address sanitizer in the library (see
+# below).
 SANITIZE = 0
 
 # The name to use for the reltrans library (must be different from reltrans, as
-# libreltrans.so is the compiled reltrans library)
+# libreltrans is the compiled reltrans library)
 XSPEC_RELTRANS_NAME = xsreltrans
 
 # This are configurable from the command line
@@ -28,14 +33,26 @@ LDFLAGS := -lXSFunctions -lXSModel -lfftw3 -lcfitsio \
 		   -L$(BUILD)/lib -L$(HEADAS_LIB)
 
 ifeq ($(DEBUG),1)
+	# Compile reltrans in 'debug' mode, which means disabling optimisations and
+	# including debug symbols.
 	FFLAGS += -g
 	CFLAGS += -g
 else
+	# The default arguments used to compile reltrans
 	FFLAGS += -O3
 	CFLAGS += -O3
 endif
 
 ifeq ($(SANITIZE),1)
+	# Include the address sanitizer. This is a compiler feature which adds a
+	# runtime address sanitizer that checks whether all memory addresses being
+	# accessed are valid (i.e. avoiding buffer overflows, use-after-frees, and
+	# so on).
+	#
+	# This has a runtime overhead, so must be explicitly enabled. If the
+	# sanitizer is triggered, it will print a traceback and some memory
+	# information, making it easier to locate the line which accessed illegal
+	# memory.
 	FFLAGS += -fsanitize=address
 	CFLAGS += -fsanitize=address
 endif
