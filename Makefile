@@ -44,11 +44,14 @@ ifeq ($(TARGET),Linux)
 	FFLAGS += -shared -export-dynamic
 	LDFLAGS += -lm -lpthread
 	SHARED_EXT := so
+	SED_INPLACE = sed -i
 else
 ifeq ($(TARGET),Darwin)
 	FFLAGS += -dynamiclib
 	LDFLAGS += -lgfortran
 	SHARED_EXT := dylib
+	# MacOS sed needs an extra useless argument
+	SED_INPLACE = sed -i ''
 endif
 endif
 
@@ -93,10 +96,10 @@ xspec: $(RELTRANS_SHARED_LIBRARY) xspec/lmodel_reltrans.dat xspec/compile_reltra
 	rm $(BUILD)/xspec/libxsreltrans.$(SHARED_EXT)
 	# Patch the XSPEC generated Makefile so that it uses the shared library
 	# compiled outside of XSPEC
-	sed -i 's|-lXSFunctions|-lXSFunctions -L$(LIB_PATH) -Wl,-rpath,"$(LIB_PATH)" -lreltrans|g' \
+	$(SED_INPLACE) 's|-lXSFunctions|-lXSFunctions -L$(LIB_PATH) -Wl,-rpath,"$(LIB_PATH)" -lreltrans|g' \
 		$(BUILD)/xspec/Makefile
 	# Set the library name
-	sed -i 's|{LIBRARY_NAME}|$(XSPEC_RELTRANS_NAME)|g' $(BUILD)/xspec/compile_reltrans.xcm
+	$(SED_INPLACE) 's|{LIBRARY_NAME}|$(XSPEC_RELTRANS_NAME)|g' $(BUILD)/xspec/compile_reltrans.xcm
 	# Compile and pray XSPEC is happy
 	cd $(BUILD)/xspec && xspec - compile_reltrans.xcm
 
