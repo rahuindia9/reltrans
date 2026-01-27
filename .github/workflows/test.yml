@@ -9,7 +9,7 @@ on:
       '.github/workflows/test.yml',
       '**/*.f90',
       '**/*.py',
-      'utils/Makefile',
+      'Makefile',
       'utils/cli.c',
       'wrappers.f90'
     ]
@@ -21,7 +21,7 @@ on:
       '.github/workflows/test.yml',
       '**/*.f90',
       '**/*.py',
-      'utils/Makefile',
+      'Makefile',
       'utils/cli.c',
       'wrappers.f90'
     ]
@@ -40,7 +40,6 @@ jobs:
         uses: actions/checkout@v5
       - name: Build debug reltrans
         run: |
-          cd utils
           make DEBUG=1
           make DEBUG=1 exe
       - name: Install GitHub CLI and fetch data files
@@ -63,5 +62,5 @@ jobs:
       - name: Run tests
         run: |
           export RELTRANS_TABLES="$(realpath reltrans-data)"
-          export RELTRANS_PATH="$(realpath utils/build/lib/libreltrans.so)"
+          export RELTRANS_PATH="$(realpath build/lib/libreltrans.so)"
           pytest -vvv test

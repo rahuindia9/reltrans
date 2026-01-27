@@ -1,7 +1,6 @@
 exe
 libreltrans.dylib
-Makefile
-utils/build
+build
 fort.*
 *.o
 *.mod
