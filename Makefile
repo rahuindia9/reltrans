@@ -128,6 +128,15 @@ xspec: $(RELTRANS_SHARED_LIBRARY) xspec/lmodel_reltrans.dat xspec/compile_reltra
 	$(SED_INPLACE) 's|{LIBRARY_NAME}|$(XSPEC_RELTRANS_NAME)|g' $(BUILD)/xspec/compile_reltrans.xcm
 	# Compile and pray XSPEC is happy
 	cd $(BUILD)/xspec && xspec - compile_reltrans.xcm
+	@echo "--------------------------------------------------------------------"
+	@echo "Build succeeded and all XSPEC checks passed."
+	@echo ""
+	@echo "To use reltrans in XSPEC, start XSPEC and load the model:"
+	@echo ""
+	@echo "    lmod xsreltrans $(abspath $(BUILD)/xspec/)"
+	@echo ""
+	@echo "For more information, consult the reltrans documentation (see the"
+	@echo "README included in the repository)."
 
 .PHONY: tables
 tables:
