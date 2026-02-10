@@ -19,8 +19,7 @@ module m_genreltrans_types
     type :: t_config
         integer :: verbose = 0
         ! firstcall: is this the first time the model has been called?
-        logical :: firstcall = .true., needtrans = .true., needconv = .true.,  &
-                   test = .false.
+        logical :: firstcall = .true., needtrans = .true., needconv = .true.,test = .false.
         integer :: me, xe, nex, m, ionvar, refvar
 
         ! TODO: are these really constants, or are they hidden variables?
@@ -35,6 +34,7 @@ module m_genreltrans_types
         double precision :: rnmax = 300.d0, dlogf = 0.09
 
         ! internal frequency grid
+        ! number of frequency bins
         integer :: nf
         real :: f, fac
         double precision :: fc, flo, fhi
@@ -42,7 +42,7 @@ module m_genreltrans_types
         integer :: fbinx
         real, allocatable :: fix(:)
 
-        !relativistic parameters and limit on rin and h
+        ! relativistic parameters and limit on rin and h
         double precision :: rmin, rh
         double precision, allocatable :: height(:), contx_int(:)
 
@@ -54,7 +54,7 @@ module m_genreltrans_types
         integer :: mubin, rbin, ibin
 
         ! variable for non linear effects
-        integer ::  DC, ionvariation
+        integer :: DC, ionvariation
         real :: dlogxi1, dlogxi2, Gamma1, Gamma2, DeltaGamma
     end type t_config
 
@@ -62,9 +62,9 @@ module m_genreltrans_types
         ! earx: internal energy grid array (0:nex)
         real, allocatable :: earx(:), ear(:), fix(:)
         real, allocatable :: ReGbar(:), ImGbar(:)
-        !lens needs to be allocatable to save it.
+        ! lens needs to be allocatable to save it.
         double precision, allocatable :: frobs(:), frrel(:)
-        !TRANSFER FUNCTIONS and Cross spectrum dynamic allocation + variables
+        ! TRANSFER FUNCTIONS and Cross spectrum dynamic allocation + variables
         complex, dimension(:,:,:,:,:), allocatable :: ker_W0, ker_W1, ker_W2, ker_W3
         real, dimension(:,:,:), allocatable :: ReW0, ImW0, ReW1, ImW1
         real, dimension(:,:,:), allocatable :: ReW2, ImW2, ReW3, ImW3
@@ -117,7 +117,7 @@ contains
         args%resp_matr = params(32)
     end subroutine unwrap_arguments
 
-    ! Adjust the model parameters to sane values and set the derived values in 
+    ! Adjust the model parameters to sane values and set the derived values in
     ! `config`. It performs the following steps:
     ! - Checks `a`, `rin`, `h` are in bounds.
     ! - Sets the inner radius to the ISCO.
@@ -127,36 +127,35 @@ contains
         integer :: i
         double precision :: disco
 
-        ! TODO: should this be printing if it modifies the input parameters? 
+        ! TODO: should this be printing if it modifies the input parameters?
         ! some kind of warning perhaps?
-        if( abs(model_args%a) .gt. 0.999 ) then
+        if(abs(model_args%a) .gt. 0.999) then
             model_args%a = sign(model_args%a,1.d0) * 0.999
         end if
         config%rmin = disco(model_args%a)
         config%rh = 1.d0+sqrt(1.d0-model_args%a**2)
-        if( model_args%rin .lt. 0.d0 ) then
+        if(model_args%rin .lt. 0.d0) then
             model_args%rin = abs(model_args%rin) * config%rmin
         end if
-        if( model_args%rin .lt. config%rmin )then
+        if(model_args%rin .lt. config%rmin)then
             write(*,*)"Warning! rin<ISCO! Set to ISCO"
             model_args%rin = config%rmin
         end if
-        do i=1,model_args%nlp 
+        do i=1,model_args%nlp
             if(model_args%h(i) .lt. 0.d0) then
                 model_args%h(i) = abs(model_args%h(i)) * config%rh
             end if
-            if( model_args%h(i) .lt. 1.5d0*config%rh )then
+            if(model_args%h(i) .lt. 1.5d0*config%rh)then
                 write(*,*)"Warning! h<1.5*rh! Set to 1.5*rh"
                 model_args%h(i) = 1.5d0 * config%rh
-            end if 
+            end if
         end do
     end subroutine arguments_check
 
     ! Read in environment variables that configure reltrans
     subroutine read_environment_variables(config)
         use env_variables, only: adensity, idum
-        use xillver_tables, only: path_tables, xillver, xillverDCp,            &
-            pathname_xillver, pathname_xillverDCp
+        use xillver_tables, only: path_tables, xillver, xillverDCp,pathname_xillver, pathname_xillverDCp
         type(t_config), intent(inout) :: config
         integer :: get_env_int
         character (len=200) :: get_env_char
@@ -165,8 +164,8 @@ contains
         ! verbose:
         ! 0: XSPEC output only
         ! 1: Print quantities to terminal + 0
-        ! 2: Model components, radial scalings, impulse responses written to 
-        !    file + 1
+        ! 2: Model components, radial scalings, impulse responses written to
+        ! file + 1
         config%verbose = get_env_int("REV_VERB", 0)
         ! include pivoting reflection
         config%refvar = get_env_int("REF_VAR", 1)
@@ -179,7 +178,7 @@ contains
         ! decide between zone A density profile or constant density profile
         adensity = max(min(get_env_int("A_DENSITY", 0), 1), 0)
 
-        ! this is from xillver_tables, sets the paths where the tables are read 
+        ! this is from xillver_tables, sets the paths where the tables are read
         ! from
         path_tables = get_env_char("RELTRANS_TABLES", './')
         write(pathname_xillver, '(A, A, A)') trim(path_tables), '/', trim(xillver)
@@ -191,8 +190,8 @@ contains
         type(t_config), intent(inout) :: config
     end subroutine initialise_all
 
-    ! Initialise all of the configuration fields that can be derived after 
-    ! `read_environment_variables` has been called, and allocate the arrays 
+    ! Initialise all of the configuration fields that can be derived after
+    ! `read_environment_variables` has been called, and allocate the arrays
     ! in `arrs`
     subroutine setup_arrays(config, arrays)
         use conv_mod, only: nex
@@ -204,7 +203,7 @@ contains
         allocate(arrays%ReGbar(nex))
         allocate(arrays%ImGbar(nex))
 
-        config%dloge = log10( config%Emax / config%Emin ) / float(nex)
+        config%dloge = log10(config%Emax / config%Emin) / float(nex)
 
         ! populate the energy array
         do i = 0,nex
@@ -230,13 +229,12 @@ contains
         endif
 
         if (needs_allocating) then
-            if (allocated(arrays%fix)) deallocate(arrays%fix) 
+            if (allocated(arrays%fix)) deallocate(arrays%fix)
             allocate(arrays%fix(0:config%nf))
 
             ! populate the frequency array
-            do i = 0, config%nf 
-                arrays%fix(i) = model_args%floHz *                             &
-                    (model_args%fhiHz / model_args%floHz)**(real(i) / real(config%nf))
+            do i = 0, config%nf
+                arrays%fix(i) = model_args%floHz *(model_args%fhiHz / model_args%floHz)**(real(i) / real(config%nf))
             end do
 
             ! reallocate the transfer function arrays
@@ -317,7 +315,7 @@ contains
         use radial_grids, only: logxir, gsdr, dfer_arr, logner
         integer, intent(in) :: nlp
         type(t_config), intent(in) :: config
-        ! allocate arrays for radial profiles 
+        ! allocate arrays for radial profiles
         allocate(dfer_arr(config%xe))
         allocate(logxir(config%xe))
         allocate(gsdr(config%xe))
@@ -343,11 +341,10 @@ contains
         write(*,*)"This is RELTRANS v1.0.0: a transfer function model for"
         write(*,*)"X-ray reverberation mapping."
         write(*,*)"Please cite Ingram et al (2019) MNRAS 488 p324-347, "
-        write(*,*)"Mastroserio et al (2021) MNRAS 507 p55-73, and "  
-        write(*,*)"Lucchini et al (2023) arXiv 230505039L."  
+        write(*,*)"Mastroserio et al (2021) MNRAS 507 p55-73, and "
+        write(*,*)"Lucchini et al (2023) arXiv 230505039L."
         write(*,*)"----------------------------------------------------"
     end subroutine print_header
 end module m_genreltrans
-
 
 
