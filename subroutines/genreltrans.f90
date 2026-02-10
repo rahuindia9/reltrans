@@ -244,47 +244,26 @@ subroutine genreltrans(Cp, dset, nlp, ear, ne, param, ifl, photar)
     real , intent(out) :: photar(ne)
     ! Variables of the subroutine
     ! initializer
-    integer :: m
-    logical :: firstcall, needtrans, needconv, test
-    double precision :: d
-    ! Parameters of the model:
-    double precision :: muobs
-    real :: Nh
-    ! internal frequency grid
-    real :: f, fac
-    ! internal energy grid (nex) and output/xspec (ne) energy grid
-    real :: dE
-    real :: ear(0:ne)
+    integer :: m, prev_nf, Cpsave, i, j, Cp_cont
+    double precision :: d, muobs
+    real :: Nh, f, fac, dE, ear(0:ne)
     ! relativistic parameters and limit on rin and h
     ! lens needs to be allocatable to save it.
     double precision, allocatable :: frobs(:),frrel(:)
-    ! TRANSFER FUNCTIONS and Cross spectrum dynamic allocation + variables
-   ! complex, dimension(:,:,:,:,:), allocatable :: transe, transea
-    ! double precision :: frobs(nlp), frrel(nlp)  !reflection fraction variables
-    ! (verbose)
-    ! Radial and angle profile
-    real :: photerx(nex)
-    real :: absorbx(nex)
-    real :: ReS(ne),ImS(ne)
-    ! variable for non linear effects
-    ! SAVE
-    integer :: prev_nf, Cpsave
-    real :: paramsave(32)
-    double precision :: fhisave, flosave
-    ! Functions
-    integer :: i, j
-    ! New
-    double precision :: fcons,contx_temp!,ell13pt6,lacc,get_lacc,
-    integer :: Cp_cont
+    real :: photerx(nex), absorbx(nex), ReS(ne),ImS(ne)
+    double precision :: fhisave, flosave, fcons,contx_temp
+
     real time_start,time_end !runtime stuff
+
+    ! SAVE
+    logical, save :: firstcall, needtrans, needconv, test
+    real, save :: paramsave(32)
 
     data firstcall /.true./
     data Cpsave/2/
     data prev_nf /-1/
     ! Save the first call variables
-    save firstcall, d, test
-    save paramsave, fhisave, flosave, prev_nf
-    save frobs, frrel, Cpsave, needtrans
+    save d, fhisave, flosave, prev_nf, frobs, frrel, Cpsave
 
     type(t_config), save :: config
     type(t_arrays), save :: arrays
