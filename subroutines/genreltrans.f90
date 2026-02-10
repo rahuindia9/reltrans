@@ -75,9 +75,12 @@ contains
 
         ! Convert frequency bounds from Hz to c/Rg (now being more accurate with
         ! constants)
-        config%fhi = dble(model_args%fhiHz) * 4.92695275718945d-06 * model_args%Mass
-        config%flo = dble(model_args%floHz) * 4.92695275718945d-06 * model_args%Mass
-        config%nf = ceiling(log10(model_args%fhiHz/model_args%floHz) / config%dlogf)
+        config%fhi = dble(model_args%fhiHz)                                    &
+            * 4.92695275718945d-06 * model_args%Mass
+        config%flo = dble(model_args%floHz)                                    &
+            * 4.92695275718945d-06 * model_args%Mass
+        config%nf = ceiling(log10(model_args%fhiHz                             &
+            /model_args%floHz) / config%dlogf)
         config%fc = 0.5d0 * (model_args%floHz + model_args%fhiHz)
 
         ! Check how we did and adjust if necessary
@@ -520,7 +523,8 @@ subroutine genreltrans(Cp, dset, nlp, ear, ne, param, ifl, photar)
         ! dset=1
         ! No need for the immaginary part in DC
         do i = 1, nex
-            arrays%ReGbar(i) = (model_args%Anorm/real(1.+model_args%eta)) * arrays%ReSrawa(i,1)
+            arrays%ReGbar(i) = (model_args%Anorm                               &
+                /real(1.+model_args%eta)) * arrays%ReSrawa(i,1)
         end do
     else if (model_args%ReIm .eq. 7) then
         ! if calculating the lag-frequency spectrum, just rebin the arrays
@@ -548,15 +552,24 @@ subroutine genreltrans(Cp, dset, nlp, ear, ne, param, ifl, photar)
         ! this is where coherence = 0 or = 1 cases merge back
         do j = 1,config%nf
             do i = 1,nex
-                arrays%ReG(i, j) = cos(model_args%DelA) * arrays%ReGrawa(i,j) - sin(model_args%DelA) * arrays%ImGrawa(i, j)
-                arrays%ImG(i, j) = cos(model_args%DelA) * arrays%ImGrawa(i,j) + sin(model_args%DelA) * arrays%ReGrawa(i, j)
+                arrays%ReG(i, j) = cos(model_args%DelA)                        &
+                    * arrays%ReGrawa(i,j)                                      &
+                    - sin(model_args%DelA) * arrays%ImGrawa(i, j)
+                arrays%ImG(i, j) = cos(model_args%DelA)                        &
+                    * arrays%ImGrawa(i,j)                                      &
+                    + sin(model_args%DelA) * arrays%ReGrawa(i, j)
             end do
         end do
         arrays%ReGbar = 0.0
         arrays%ImGbar = 0.0
-        fac = 2.302585* config%fc**2 * log10(model_args%fhiHz/model_args%floHz) / ((model_args%fhiHz-model_args%floHz) * real(config%nf))
+        fac = 2.302585                                                         &
+            * config%fc**2 * log10(model_args%fhiHz                            &
+            /model_args%floHz) / ((model_args%fhiHz                            &
+            -model_args%floHz) * real(config%nf))
         do j = 1,config%nf
-            f = model_args%floHz * (model_args%fhiHz/model_args%floHz)**((real(j)-0.5) / real(config%nf))
+            f = model_args%floHz                                               &
+                * (model_args%fhiHz                                            &
+                /model_args%floHz)**((real(j)-0.5) / real(config%nf))
             do i = 1,nex
                 arrays%ReGbar(i) = arrays%ReGbar(i) + arrays%ReG(i,j) / f
                 arrays%ImGbar(i) = arrays%ImGbar(i) + arrays%ImG(i,j) / f
@@ -566,8 +579,10 @@ subroutine genreltrans(Cp, dset, nlp, ear, ne, param, ifl, photar)
         ! power in squared fractional rms format
         ! note: the factor eta is to have the same normalization as the single
         ! LP model, it's 100% arbitrary
-        arrays%ReGbar = arrays%ReGbar * fac * (model_args%Anorm/real(1.+model_args%eta))**2
-        arrays%ImGbar = arrays%ImGbar * fac * (model_args%Anorm/real(1.+model_args%eta))**2
+        arrays%ReGbar = arrays%ReGbar                                          &
+            * fac * (model_args%Anorm/real(1.+model_args%eta))**2
+        arrays%ImGbar = arrays%ImGbar                                          &
+            * fac * (model_args%Anorm/real(1.+model_args%eta))**2
     end if
 
     ! Write output depending on ReIm parameter

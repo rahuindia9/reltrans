@@ -211,7 +211,8 @@ contains
 
         ! populate the energy array
         do i = 0,nex
-           arrays%earx(i) = config%Emin * (config%Emax/config%Emin)**(float(i)/float(nex))
+           arrays%earx(i) = config%Emin                                        &
+               * (config%Emax/config%Emin)**(float(i)/float(nex))
         end do
 
     end subroutine setup_arrays
@@ -238,7 +239,9 @@ contains
 
             ! populate the frequency array
             do i = 0, config%nf
-                arrays%fix(i) = model_args%floHz *(model_args%fhiHz / model_args%floHz)**(real(i) / real(config%nf))
+                arrays%fix(i) = model_args%floHz                               &
+                    *(model_args%fhiHz                                         &
+                    / model_args%floHz)**(real(i) / real(config%nf))
             end do
 
             ! reallocate the transfer function arrays
