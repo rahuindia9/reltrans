@@ -12,6 +12,7 @@ class SourceLine:
     indent: int
 
     comment: bool = False
+    has_comment: bool = False
     source: bool = False
 
     # Needs a continuation character
@@ -19,6 +20,11 @@ class SourceLine:
 
     # Is a subroutine call
     call: Bool = False
+    # Is a write call
+    write: Bool = False
+    # Is an assignment operation
+    assignment: Bool = False
+    is_open: Bool = False
 
     @staticmethod
     def from_string(line: str) -> "SourceLine":
@@ -30,19 +36,31 @@ class SourceLine:
         if is_comment:
             stripped = stripped.lstrip("!").lstrip()
 
+        if not is_comment:
+            has_comment = re.match(r".*!.*", stripped) is not None
+        else:
+            has_comment = False
+
         is_cont = re.match(r".*&$", stripped) is not None
         if not is_comment and is_cont:
             stripped = stripped.rstrip("&").rstrip()
 
         is_call = re.match(r"^call .*", stripped) is not None
+        is_write = re.match(r"^write .*", stripped) is not None
+        is_assignment = re.match(r"^.*=.*", stripped) is not None
+        is_open = re.match(r"^open\s.*", stripped) is not None
 
         return SourceLine(
             line=stripped,
             comment=is_comment,
+            has_comment=has_comment,
             source=not is_comment,
             indent=indent,
             cont=is_cont,
             call=is_call,
+            write=is_write,
+            assignment=is_assignment and not is_open,
+            is_open=is_open,
         )
 
     def __len__(self) -> int:
@@ -63,6 +81,34 @@ class SourceLine:
                 width=width - self.indent - 2,
             )
         ]
+
+    def maths_wrap(
+        self, width, maths_tokens=["/", "+", "-", "*"], indent_width=4
+    ) -> "SourceLine":
+        kwargs = dict(cont=True, indent=self.indent)
+
+        lines = []
+        new = self.line
+        while len(new) + self.indent + indent_width >= width:
+            cuts = [(token, new.find(token)) for token in maths_tokens]
+            cuts = [i for i in cuts if i[1] > 0]
+
+            if len(cuts) == 0:
+                break
+
+            token, cut = min(cuts, key=lambda x: x[1])
+
+            text = new[:cut]
+            lines.append(dataclasses.replace(self, line=text.strip(), **kwargs))
+            new = new[cut:]
+
+            if len(lines) == 1:
+                kwargs["indent"] += indent_width
+
+        lines.append(dataclasses.replace(self, line=new.strip(), **kwargs))
+        lines[-1].cont = False
+
+        return lines
 
     def source_wrap(self, width, sep=",", indent_width=4) -> "SourceLine":
         tokens = self.line.split(sep)
@@ -160,8 +206,10 @@ class Formatter:
             if len(l) > self.text_width:
                 if l.comment:
                     lines += l.word_wrap(self.text_width)
-                elif l.source and l.call:
+                elif not l.has_comment and l.call:
                     lines += l.source_wrap(self.text_width)
+                elif not l.has_comment and l.assignment:
+                    lines += l.maths_wrap(self.text_width)
                 else:
                     lines.append(l)
             else:
