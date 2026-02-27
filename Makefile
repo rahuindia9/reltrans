@@ -18,6 +18,8 @@ XSPEC_RELTRANS_NAME = xsreltrans
 TARGET = $(shell uname)
 FC = gfortran
 
+ALL_RELTRANS_SOURCE_FILES = $(shell find $(ROOTDIR)/subroutines -name '*.f90')
+
 CFLAGS := -fno-omit-frame-pointer
 
 FFLAGS := -DHAVE_INLINE -fPIC -fno-automatic -fno-second-underscore \
@@ -85,19 +87,19 @@ $(BUILD)/bin/relcli: ./utils/cli.c $(BUILD)/lib/libreltrans.$(SHARED_EXT)
 		-L$(BUILD)/lib -lgfortran -lc -lm -lmvec \
 		-Wl,-rpath,'$$ORIGIN/../lib' -lreltrans
 
+# Need to use abspath here so that on MacOS the correct linker identity is
+# generated. Macos does library pathing differently, and the easiest thing to
+# do is to make sure anything that links against reltrans gets the absolute
+# path to the library.
+#
+# Note: this does mean that the library cannot be relocated on the machine. If
+# someone wants to install it to a different location, the easiest thing to do
+# would be to either tell them to run `make BUILD=/path/to/opt/`, or to invoke
+# `install_name_tool` (see discussion in PR #55).
 $(RELTRANS_SHARED_LIBRARY): $(BUILD) $(BUILD)/cache/wrappers.o
-	# Need to use abspath here so that on MacOS the correct linker identity is
-	# generated. Macos does library pathing differently, and the easiest thing
-	# to do is to make sure anything that links against reltrans gets the
-	# absolute path to the library.
-	#
-	# Note: this does mean that the library cannot be relocated on the machine.
-	# If someone wants to install it to a different location, the easiest thing
-	# to do would be to either tell them to run `make BUILD=/path/to/opt/`, or
-	# to invoke `install_name_tool` (see discussion in PR #55).
 	$(FC) $(FFLAGS) $(BUILD)/cache/wrappers.o -o $(abspath $@) $(LDFLAGS)
 
-$(BUILD)/cache/%.o: $(ROOTDIR)/%.f90
+$(BUILD)/cache/%.o: $(ROOTDIR)/%.f90 $(ALL_RELTRANS_SOURCE_FILES)
 	$(FC) $(FFLAGS) -c $< -o $@
 
 $(BUILD):

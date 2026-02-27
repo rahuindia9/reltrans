@@ -1,6 +1,9 @@
 import os
+import platform
 import dataclasses
 import ctypes as ct
+import pathlib
+import warnings
 
 import numpy as np
 
@@ -9,22 +12,37 @@ f_float = ct.POINTER(ct.c_float)
 f_int = ct.POINTER(ct.c_int)
 
 
-def get_reltrans_library_path() -> str:
+def get_reltrans_library_path(lib_name="libreltrans") -> str:
     """
-    Get the reltrans library path as a string.
+    Get the reltrans library path as a string. Checks common locations from the
+    reltrans root directory. This can be overwritten using the `RELTRANS_PATH`
+    environment variable.
 
-    This is read from the environment variable `RELTRANS_PATH`.
-
-    **Note**: in the future this could be extended to search e.g. the
-    `LD_LIBRARY_PATH` or other default locations if the environment variable is
-    not set.
+    If no path is set, this function will return the name of the shared library
+    with the hope that `LoadLibrary` will be able to resolve it in the linker
+    path.
     """
     lib_path = os.environ.get("RELTRANS_PATH", None)
-
     if lib_path:
+        warnings.warn(f"Using RELTRANS_PATH variable: {lib_path}")
         return lib_path
 
-    raise Exception("RELTRANS_PATH not set")
+    build_dir = pathlib.Path(pathlib.Path(__file__).parent.parent) / "build" / "lib"
+
+    system = platform.system()
+    if system == "Linux":
+        lib_name = lib_name + ".so"
+    elif system == "Darwin":
+        lib_name = lib_name + ".dylib"
+    else:
+        raise Exception("Unsupported OS " + system)
+
+    lib_path = build_dir / lib_name
+    print(str(lib_path.absolute()))
+    if lib_path.is_file():
+        return str(lib_path.absolute())
+
+    return lib_name
 
 
 def _wrap_call(f, energy: np.ndarray, params: np.ndarray) -> np.ndarray:
