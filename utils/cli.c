@@ -82,7 +82,18 @@ int main() {
     return 1;
   }
 
+  float *comparison = malloc(sizeof(float) * e_num);
+  if (comparison == NULL) {
+    LOG_ERR("Failed to allocate comparison array");
+    return 1;
+  }
+
   RT_DCP_Params params = default_parameters();
+
+  params.mass = 10.0;
+  params.flo_hz = 0.122;
+  params.fhi_hz = 0.224;
+  params.re_im = 1.0;
 
   // logarithmic energy grid
   for (int i = 0; i < e_num; ++i) {
@@ -99,6 +110,27 @@ int main() {
   time = clock() - time;
 
   printf("Total Call: %.6f seconds\n", ((double)time) / CLOCKS_PER_SEC);
+  // run it a few times
+  for (size_t i = 0; i < 100; ++i) {
+      // zero the output buffer
+      memset(output, 0, e_num);
+
+      clock_t time = clock();
+      int ifl = 1;
+      tdreltransdcp_(energy, &e_num, (float *)&params, &ifl, output);
+      time = clock() - time;
+      printf("Total Call %ld: %.6f seconds\n", i, ((double)time) / CLOCKS_PER_SEC);
+
+      if (i == 0) {
+          memcpy(comparison, output, sizeof(*comparison) * e_num);
+      } else {
+          for (size_t j = 0; j < e_num; ++j) {
+              if (fabs((output[j] - comparison[j]) / (comparison[j] + 1e-5)) < 0.005) {
+                  printf(" - [%ld] %.8f != %.8f\n", j, comparison[j], output[j]);
+              }
+          }
+      }
+  }
 
   printf("Serialising output to file...\n");
   FILE *fp = fopen(output_file, "w");
@@ -112,6 +144,7 @@ int main() {
   }
 
   fclose(fp);
+  free(comparison);
   free(output);
   free(energy);
 
